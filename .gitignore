@@ -1,0 +1,34 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+
+# production
+/build
+
+# secrets — never commit the Neon connection string or the report password
+.env
+.env.*
+!.env.example
+
+# testing artefacts
+/test-results/
+/playwright-report/
+*.pdf
+
+# misc
+.DS_Store
+*.pem
+/.vercel
+*.tsbuildinfo
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*

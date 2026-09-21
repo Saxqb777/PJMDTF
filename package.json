@@ -1,0 +1,27 @@
+{
+  "name": "pjmdtf",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Member directory and voluntary contribution form for Pewe Jama-tul-Muslimeen Deeni Thali Fund (Mumbai Jamaat)",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
+    "next": "15.5.25",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/pg": "^8.11.10",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "pg": "^8.16.3",
+    "typescript": "^5.7.2"
+  }
+}
