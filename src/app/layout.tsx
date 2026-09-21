@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import {
   FORM_CLOSES,
   MONTHLY_TARGET,
-  ORGANISATION,
   ORGANISATION_SHORT,
   SUGGESTED_AMOUNT,
   TARGET_MEMBERS,
@@ -22,7 +21,7 @@ const SUMMARY =
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: ORGANISATION_SHORT,
-  description: `${ORGANISATION}. ${SUMMARY}`,
+  description: SUMMARY,
   applicationName: ORGANISATION_SHORT,
   // The Jamaat's finances are its own business. Shared by link, not searched
   // for — and the crawlers that unfurl a link preview do not consult this.

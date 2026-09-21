@@ -2,7 +2,7 @@ import { listMembers } from "@/lib/db";
 import {
   AMOUNT_OPTIONS,
   MONTHLY_TARGET,
-  ORGANISATION,
+  ORGANISATION_SHORT,
   SIGNATORY,
   formatRupees,
 } from "@/lib/constants";
@@ -61,7 +61,7 @@ export default async function Report() {
       </div>
 
       <header className="masthead">
-        <p className="eyebrow">{ORGANISATION}</p>
+        <p className="eyebrow">{ORGANISATION_SHORT}</p>
         <h1>Contributions pledged</h1>
         <p className="standfirst">Managing Committee &middot; as at {today()}</p>
         <div className="band" aria-hidden="true" />

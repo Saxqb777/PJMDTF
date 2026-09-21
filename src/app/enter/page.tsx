@@ -1,4 +1,4 @@
-import { ORGANISATION } from "@/lib/constants";
+import { ORGANISATION_SHORT } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,7 @@ export default async function Enter({ searchParams }: { searchParams: Search }) 
   return (
     <main className="page gate">
       <header className="masthead">
-        <p className="eyebrow">{ORGANISATION}</p>
+        <p className="eyebrow">{ORGANISATION_SHORT}</p>
         <h1>Contribution report</h1>
         <p className="standfirst">Managing Committee only</p>
         <div className="band" aria-hidden="true" />

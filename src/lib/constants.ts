@@ -54,7 +54,6 @@ export const CITY_SUGGESTIONS = [
   "Ratnagiri",
 ] as const;
 
-export const ORGANISATION = "Pewe Jama-tul-Muslimeen Deeni Thali Fund";
 export const ORGANISATION_SHORT = "PJMDTF";
 export const SIGNATORY = "Managing Committee, PJMDTF";
 

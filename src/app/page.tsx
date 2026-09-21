@@ -14,7 +14,7 @@ import {
   EFFECTIVE_FROM,
   FORM_CLOSES,
   MONTHLY_TARGET,
-  ORGANISATION,
+  ORGANISATION_SHORT,
   SALARIES,
   SIGNATORY,
   SUGGESTED_AMOUNT,
@@ -113,7 +113,7 @@ export default async function Home({ searchParams }: { searchParams: Search }) {
         <p className="arabic arabic-open" dir="rtl" lang="ar">
           السلام عليكم ورحمة الله وبركاته
         </p>
-        <p className="eyebrow">{ORGANISATION}</p>
+        <p className="eyebrow">{ORGANISATION_SHORT}</p>
         <h1>{t.title}</h1>
         <p className="standfirst">{t.standfirst}</p>
         <Band />
