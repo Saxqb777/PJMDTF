@@ -9,6 +9,8 @@
 // Everywhere else we accept 6 to 14 digits, because national formats vary
 // and refusing a member's real number is worse than storing an odd one.
 
+import { errors, type Lang } from "@/lib/strings";
+
 export const INDIA_DIAL = "+91";
 
 const MIN_DIGITS = 6;
@@ -34,15 +36,14 @@ export function isValidNational(national: string, dial: string): boolean {
 }
 
 /** A plain sentence saying what is wrong. No error codes, no jargon. */
-function explain(attempt: string, dial: string): string {
+function explain(attempt: string, dial: string, lang: Lang): string {
+  const e = errors(lang);
   const n = attempt.length;
   if (dial === INDIA_DIAL) {
-    if (n !== INDIA_DIGITS) {
-      return `An Indian mobile number is ${INDIA_DIGITS} digits. You entered ${n}. Please check the number and try again.`;
-    }
-    return "An Indian mobile number starts with 6, 7, 8 or 9. Please check the number and try again.";
+    if (n !== INDIA_DIGITS) return e.phoneIndiaLength(INDIA_DIGITS, n);
+    return e.phoneIndiaStart;
   }
-  return `A mobile number should be between ${MIN_DIGITS} and ${MAX_DIGITS} digits. You entered ${n}. Please check the number and try again.`;
+  return e.phoneLength(MIN_DIGITS, MAX_DIGITS, n);
 }
 
 /**
@@ -52,18 +53,16 @@ function explain(attempt: string, dial: string): string {
  * country select is what decides the code — we never read it from the typed
  * number, so a member cannot accidentally file themselves under Rwanda.
  */
-export function normalisePhone(raw: string, dial: string): PhoneResult {
+export function normalisePhone(raw: string, dial: string, lang: Lang = "en"): PhoneResult {
+  const e = errors(lang);
   const trimmed = raw.trim();
   if (trimmed === "") {
-    return { ok: false, message: "Please enter your mobile number." };
+    return { ok: false, message: e.phoneRequired };
   }
 
   let digits = digitsOnly(trimmed);
   if (digits === "") {
-    return {
-      ok: false,
-      message: "That mobile number has no digits in it. Please enter the number.",
-    };
+    return { ok: false, message: e.phoneNoDigits };
   }
 
   // 00 is the international access code, so 0091... is the same as +91...
@@ -90,5 +89,5 @@ export function normalisePhone(raw: string, dial: string): PhoneResult {
     if (isValidNational(candidate, dial)) return { ok: true, national: candidate };
   }
 
-  return { ok: false, message: explain(stripLeadingZeros(digits), dial) };
+  return { ok: false, message: explain(stripLeadingZeros(digits), dial, lang) };
 }

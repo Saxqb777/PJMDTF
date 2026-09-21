@@ -29,6 +29,8 @@ export const AMOUNT_OPTIONS = [250, 350, 500, 750, 1000] as const;
 export const MIN_AMOUNT = 50;
 export const MAX_AMOUNT = 1000000;
 
+/** Machine-readable, for the countdown. Kept beside the words people read. */
+export const CLOSES_ON = "2026-09-30";
 export const FORM_CLOSES = "30 September 2026";
 export const EFFECTIVE_FROM = "1 October 2026";
 

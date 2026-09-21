@@ -4,6 +4,7 @@
 import { countryByIso } from "@/lib/countries";
 import { normalisePhone } from "@/lib/phone";
 import { AMOUNT_OPTIONS, MAX_AMOUNT, MIN_AMOUNT, formatRupees } from "@/lib/constants";
+import { errors, type Lang } from "@/lib/strings";
 import type { MemberInput } from "@/lib/db";
 
 export const NAME_MIN = 3;
@@ -74,48 +75,49 @@ export function draftFrom(form: FormData): Draft {
   };
 }
 
-export function validate(form: FormData): Validated {
+export function validate(form: FormData, lang: Lang = "en"): Validated {
+  const e = errors(lang);
   const draft = draftFrom(form);
   const reject = (message: string): Validated => ({ ok: false, message, draft });
 
   const fullName = squash(draft.fullName);
-  if (fullName === "") return reject("Please enter your full name.");
+  if (fullName === "") return reject(e.nameRequired);
   if (fullName.length < NAME_MIN) {
-    return reject(`Your name looks too short. Please enter at least ${NAME_MIN} letters.`);
+    return reject(e.nameShort(NAME_MIN));
   }
   if (fullName.length > NAME_MAX) {
-    return reject(`That name is longer than ${NAME_MAX} letters. Please shorten it.`);
+    return reject(e.nameLong(NAME_MAX));
   }
 
   const country = countryByIso(draft.country);
-  if (!country) return reject("Please choose the country you live in.");
+  if (!country) return reject(e.countryRequired);
 
-  const phone = normalisePhone(draft.phone, country.dial);
+  const phone = normalisePhone(draft.phone, country.dial, lang);
   if (!phone.ok) return reject(phone.message);
 
   const email = squash(draft.email);
   if (email !== "") {
     if (email.length > EMAIL_MAX) {
-      return reject("That email address is too long. Please check it, or leave it blank.");
+      return reject(e.emailLong);
     }
     if (!/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(email)) {
-      return reject("That email address does not look right. Please check it, or leave it blank.");
+      return reject(e.emailInvalid);
     }
   }
 
   const address = tidyAddress(draft.address);
-  if (address === "") return reject("Please enter your current residential address.");
+  if (address === "") return reject(e.addressRequired);
   if (address.length > ADDRESS_MAX) {
-    return reject(`That address is longer than ${ADDRESS_MAX} letters. Please shorten it.`);
+    return reject(e.addressLong(ADDRESS_MAX));
   }
 
   const city = tidyPlaceName(draft.city);
-  if (city === "") return reject("Please enter the city you live in.");
+  if (city === "") return reject(e.cityRequired);
   if (city.length > CITY_MAX) {
-    return reject(`That city name is longer than ${CITY_MAX} letters. Please shorten it.`);
+    return reject(e.cityLong(CITY_MAX));
   }
 
-  const amount = resolveAmount(draft);
+  const amount = resolveAmount(draft, lang);
   if (!amount.ok) return reject(amount.message);
 
   return {
@@ -133,35 +135,39 @@ export function validate(form: FormData): Validated {
   };
 }
 
-function resolveAmount(draft: Draft): { ok: true; value: number } | { ok: false; message: string } {
+function resolveAmount(
+  draft: Draft,
+  lang: Lang,
+): { ok: true; value: number } | { ok: false; message: string } {
+  const e = errors(lang);
   if (draft.amount === "") {
-    return { ok: false, message: "Please choose how much you would like to contribute each month." };
+    return { ok: false, message: e.amountRequired };
   }
 
   if (draft.amount !== "other") {
     const chosen = Number(draft.amount);
     if (!AMOUNT_OPTIONS.includes(chosen as (typeof AMOUNT_OPTIONS)[number])) {
-      return { ok: false, message: "Please choose one of the amounts listed, or choose Other." };
+      return { ok: false, message: e.amountNotListed };
     }
     return { ok: true, value: chosen };
   }
 
   const typed = draft.otherAmount.replace(/[\s,₹]/g, "").trim();
   if (typed === "") {
-    return { ok: false, message: "You chose Other. Please type the amount you would like to give each month." };
+    return { ok: false, message: e.otherRequired };
   }
   if (!/^[0-9]+$/.test(typed)) {
-    return { ok: false, message: "Please type the amount in whole rupees, using digits only." };
+    return { ok: false, message: e.otherDigitsOnly };
   }
   const value = Number(typed);
   if (!Number.isSafeInteger(value)) {
-    return { ok: false, message: "Please type the amount in whole rupees, using digits only." };
+    return { ok: false, message: e.otherDigitsOnly };
   }
   if (value < MIN_AMOUNT) {
-    return { ok: false, message: `The smallest amount the form can record is ${formatRupees(MIN_AMOUNT)}.` };
+    return { ok: false, message: e.otherTooSmall(formatRupees(MIN_AMOUNT)) };
   }
   if (value > MAX_AMOUNT) {
-    return { ok: false, message: `The largest amount the form can record is ${formatRupees(MAX_AMOUNT)}.` };
+    return { ok: false, message: e.otherTooLarge(formatRupees(MAX_AMOUNT)) };
   }
   return { ok: true, value };
 }

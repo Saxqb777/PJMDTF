@@ -2,6 +2,9 @@ import { cookies } from "next/headers";
 
 import { PINNED_COUNTRIES, OTHER_COUNTRIES, DEFAULT_COUNTRY_ISO, countryByIso } from "@/lib/countries";
 import { DRAFT_COOKIE, EMPTY_DRAFT, decodeDraft } from "@/lib/draft-cookie";
+import { getPublicTotals } from "@/lib/db";
+import { deadline, isUrgent } from "@/lib/deadline";
+import { LANGS, copy, toLang } from "@/lib/strings";
 import {
   AMOUNT_OPTIONS,
   CITY_SUGGESTIONS,
@@ -10,7 +13,6 @@ import {
   CURRENT_RATE,
   EFFECTIVE_FROM,
   FORM_CLOSES,
-  JAMAAT,
   MONTHLY_TARGET,
   ORGANISATION,
   SALARIES,
@@ -32,15 +34,44 @@ function one(value: string | string[] | undefined): string {
 const SHORTFALL_LOW = MONTHLY_TARGET - CURRENT_COLLECTION_HIGH;
 const SHORTFALL_HIGH = MONTHLY_TARGET - CURRENT_COLLECTION_LOW;
 
+/** An eight-pointed star, tiled. Defined once, drawn by every band. */
+function StarDefs() {
+  return (
+    <svg className="svg-defs" width="0" height="0" aria-hidden="true" focusable="false">
+      <defs>
+        <pattern id="pjmdtf-stars" width="30" height="24" patternUnits="userSpaceOnUse">
+          <g fill="none" stroke="currentColor" strokeWidth="1.15">
+            <polygon points="15,2 25,12 15,22 5,12" />
+            <rect x="8" y="5" width="14" height="14" />
+          </g>
+        </pattern>
+      </defs>
+    </svg>
+  );
+}
+
+function Band() {
+  return (
+    <div className="band" aria-hidden="true">
+      <svg className="band-art" width="100%" height="24" focusable="false">
+        <rect width="100%" height="24" fill="url(#pjmdtf-stars)" />
+      </svg>
+    </div>
+  );
+}
+
 export default async function Home({ searchParams }: { searchParams: Search }) {
   const params = await searchParams;
+  const lang = toLang(one(params.lang));
+  const t = copy(lang);
+  const qs = lang === "en" ? "" : `?lang=${lang}`;
 
   // The draft is only read when the redirect says there was a problem, so
   // arriving at a bare "/" never shows a stale message from five minutes ago.
   const failed = one(params.e) === "1";
   const payload = failed ? decodeDraft((await cookies()).get(DRAFT_COOKIE)?.value) : null;
   const draft = payload?.draft ?? EMPTY_DRAFT;
-  const problem = payload?.message ?? (failed ? "Something went wrong. Please try again." : "");
+  const problem = payload?.message ?? (failed ? t.problemFallback : "");
 
   const doneRaw = one(params.done);
   const done = /^[0-9]+$/.test(doneRaw) ? Number(doneRaw) : null;
@@ -49,272 +80,374 @@ export default async function Home({ searchParams }: { searchParams: Search }) {
   const selectedCountry = countryByIso(draft.country)?.iso ?? DEFAULT_COUNTRY_ISO;
   const selectedDial = countryByIso(selectedCountry)?.dial ?? "+91";
 
+  const when = deadline();
+  const totals = await getPublicTotals();
+
+  // The running total, scaled so the ₹25,000 line always has a place to sit.
+  const pledged = totals?.pledged ?? 0;
+  const scaleMax = Math.max(pledged, MONTHLY_TARGET);
+  const fillPercent = scaleMax === 0 ? 0 : (pledged / scaleMax) * 100;
+  const targetPercent = scaleMax === 0 ? 100 : (MONTHLY_TARGET / scaleMax) * 100;
+  const covered = pledged >= MONTHLY_TARGET;
+
   return (
-    <main className="page">
+    <main className="page page-form">
+      <StarDefs />
+
+      <nav className="lang-switch" aria-label={t.switchLabel}>
+        <span className="lang-switch-label">{t.switchLabel}</span>
+        {LANGS.map((l) =>
+          l.code === lang ? (
+            <span key={l.code} className="lang-current" aria-current="true">
+              {l.label}
+            </span>
+          ) : (
+            <a key={l.code} href={l.code === "en" ? "/" : `/?lang=${l.code}`}>
+              {l.label}
+            </a>
+          ),
+        )}
+      </nav>
+
       <header className="masthead">
         <p className="arabic arabic-open" dir="rtl" lang="ar">
           السلام عليكم ورحمة الله وبركاته
         </p>
         <p className="eyebrow">{ORGANISATION}</p>
-        <h1>Monthly contribution towards the Jamaat&rsquo;s salaries</h1>
-        <p className="standfirst">{JAMAAT} &middot; Managing Committee</p>
-        <div className="band" aria-hidden="true" />
+        <h1>{t.title}</h1>
+        <p className="standfirst">{t.standfirst}</p>
+        <Band />
       </header>
 
-      <section className="prose" aria-labelledby="obligation">
-        <h2 id="obligation">What the Jamaat pays every month</h2>
-        <table className="salaries">
-          <tbody>
-            {SALARIES.map((row) => (
-              <tr key={row.role}>
-                <th scope="row">{row.role}</th>
-                <td className="figure">{formatRupees(row.amount)}</td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr>
-              <th scope="row">Total every month</th>
-              <td className="figure">{formatRupees(MONTHLY_TARGET)}</td>
-            </tr>
-          </tfoot>
-        </table>
-      </section>
-
-      <section className="prose" aria-labelledby="standing">
-        <h2 id="standing">Where the fund stands today</h2>
-        <p>
-          At the present {formatRupees(CURRENT_RATE)} per member, collection averages{" "}
-          {formatRupees(CURRENT_COLLECTION_LOW)} to {formatRupees(CURRENT_COLLECTION_HIGH)} a month.
-          The salaries alone come to {formatRupees(MONTHLY_TARGET)}.
+      <div className={"action-bar" + (isUrgent(when) ? " action-bar-urgent" : "")}>
+        <p className="countdown">
+          {when.state === "open" && t.daysLeft(when.days)}
+          {when.state === "last-day" && t.lastDay}
+          {when.state === "closed" && t.closed(FORM_CLOSES)}
         </p>
-
-        <p className="headline-figure">
-          <span className="headline-figure-amount">
-            {formatRupees(SHORTFALL_LOW)} &ndash; {formatRupees(SHORTFALL_HIGH)}
-          </span>
-          <span className="headline-figure-label">short every month, on salaries alone</span>
+        <p className="jump">
+          <a href="#form">{t.jumpToForm} &darr;</a>
         </p>
+      </div>
 
-        <p>
-          That is before welfare, maintenance, religious education, emergencies or any development
-          work.
-        </p>
-      </section>
+      <div className="columns">
+        <div className="column-case">
+          {totals && (
+            <section className="progress" aria-labelledby="progress-heading">
+              <h2 id="progress-heading">{t.progressHeading}</h2>
+              {totals.members === 0 ? (
+                <p>{t.progressEmpty}</p>
+              ) : (
+                <>
+                  <p className="progress-joined">{t.progressJoined(totals.members)}</p>
+                  <div
+                    className="meter"
+                    role="img"
+                    aria-label={t.progressBarLabel(
+                      formatRupees(pledged),
+                      formatRupees(MONTHLY_TARGET),
+                    )}
+                  >
+                    <div className="meter-fill" style={{ width: fillPercent + "%" }} />
+                    <div className="meter-target" style={{ left: targetPercent + "%" }} />
+                  </div>
+                  <p className="progress-of">
+                    {t.progressOf(formatRupees(pledged), formatRupees(MONTHLY_TARGET))}
+                  </p>
+                  {covered && <p className="progress-covered">{t.progressCovered}</p>}
+                </>
+              )}
+            </section>
+          )}
 
-      <section className="prose" aria-labelledby="ask">
-        <h2 id="ask">What we are asking</h2>
-        <p>
-          If {TARGET_MEMBERS} earning members voluntarily give {formatRupees(SUGGESTED_AMOUNT)} a
-          month, the {formatRupees(MONTHLY_TARGET)} is covered in full. Anything above that builds a
-          reserve for the work the salaries do not cover.
-        </p>
-        <p className="notice">
-          This is not a mandatory increase. Members give what they can afford.
-        </p>
-      </section>
-
-      <section className="prose" aria-labelledby="dates">
-        <h2 id="dates">Dates</h2>
-        <dl className="dates">
-          <div>
-            <dt>Form closes</dt>
-            <dd>{FORM_CLOSES}</dd>
-          </div>
-          <div>
-            <dt>Contributions effective from</dt>
-            <dd>{EFFECTIVE_FROM}</dd>
-          </div>
-        </dl>
-        <p>
-          This is for all earning members of the Jamaat, wherever they live &mdash; India, the UAE,
-          Oman, elsewhere in the Gulf, or anywhere else.
-        </p>
-      </section>
-
-      <section className="form-section" id="form" aria-labelledby="form-heading">
-        <div className="band" aria-hidden="true" />
-        <h2 id="form-heading">Your details</h2>
-
-        {done !== null && (
-          <p className="banner banner-done" role="status">
-            <strong>
-              {wasUpdate
-                ? "Thank you. Your monthly contribution has been updated to " +
-                  formatRupees(done) +
-                  "."
-                : "Thank you. Your monthly contribution of " + formatRupees(done) + " has been recorded."}
-            </strong>
-            <span>
-              If you change your mind, fill the form again with the same mobile number and the new
-              amount replaces the old.
-            </span>
-          </p>
-        )}
-
-        {problem !== "" && (
-          <p className="banner banner-problem" role="alert">
-            {problem}
-          </p>
-        )}
-
-        <form method="post" action="/api/join" className="form">
-          <div className="field">
-            <label htmlFor="fullName">Full name</label>
-            <input
-              type="text"
-              id="fullName"
-              name="fullName"
-              required
-              maxLength={NAME_MAX}
-              autoComplete="name"
-              defaultValue={draft.fullName}
-            />
-          </div>
-
-          <div className="field">
-            <label htmlFor="country">Country you live in</label>
-            <select id="country" name="country" required defaultValue={selectedCountry}>
-              <optgroup label="India and the Gulf">
-                {PINNED_COUNTRIES.map((c) => (
-                  <option key={c.iso} value={c.iso} data-dial={c.dial}>
-                    {c.name} ({c.dial})
-                  </option>
+          <section className="prose" aria-labelledby="obligation">
+            <h2 id="obligation">{t.obligationHeading}</h2>
+            <table className="salaries">
+              <tbody>
+                {SALARIES.map((row) => (
+                  <tr key={row.role}>
+                    <th scope="row">{row.role}</th>
+                    <td className="figure">{formatRupees(row.amount)}</td>
+                  </tr>
                 ))}
-              </optgroup>
-              <optgroup label="Every other country">
-                {OTHER_COUNTRIES.map((c) => (
-                  <option key={c.iso} value={c.iso} data-dial={c.dial}>
-                    {c.name} ({c.dial})
-                  </option>
-                ))}
-              </optgroup>
-            </select>
-          </div>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <th scope="row">{t.roleTotal}</th>
+                  <td className="figure">{formatRupees(MONTHLY_TARGET)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </section>
 
-          <div className="field">
-            <label htmlFor="phone">Mobile number</label>
-            <div className="phone-row">
-              <span className="dial" id="dial" aria-hidden="true">
-                {selectedDial}
+          <section className="prose" aria-labelledby="standing">
+            <h2 id="standing">{t.standingHeading}</h2>
+            <p>
+              {t.standingBody(
+                formatRupees(CURRENT_RATE),
+                formatRupees(CURRENT_COLLECTION_LOW),
+                formatRupees(CURRENT_COLLECTION_HIGH),
+                formatRupees(MONTHLY_TARGET),
+              )}
+            </p>
+
+            <p className="headline-figure">
+              <span className="headline-figure-amount">
+                {formatRupees(SHORTFALL_LOW)} &ndash; {formatRupees(SHORTFALL_HIGH)}
               </span>
-              <input
-                type="tel"
-                id="phone"
-                name="phone"
-                required
-                inputMode="tel"
-                autoComplete="tel-national"
-                defaultValue={draft.phone}
-              />
-            </div>
-            <p className="hint">
-              Your country above sets the code. Type only your own number after it.
+              <span className="headline-figure-label">{t.shortfallLabel}</span>
             </p>
-          </div>
 
-          <div className="field">
-            <label htmlFor="email">
-              Email address <span className="optional">optional</span>
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              maxLength={EMAIL_MAX}
-              autoComplete="email"
-              defaultValue={draft.email}
-            />
-          </div>
+            <p>{t.standingAfter}</p>
+          </section>
 
-          <div className="field">
-            <label htmlFor="address">Current residential address</label>
-            <textarea
-              id="address"
-              name="address"
-              required
-              rows={4}
-              maxLength={ADDRESS_MAX}
-              autoComplete="street-address"
-              defaultValue={draft.address}
-            />
-          </div>
-
-          <div className="field">
-            <label htmlFor="city">City</label>
-            <input
-              type="text"
-              id="city"
-              name="city"
-              required
-              maxLength={CITY_MAX}
-              list="cities"
-              autoComplete="address-level2"
-              defaultValue={draft.city}
-            />
-            <datalist id="cities">
-              {CITY_SUGGESTIONS.map((city) => (
-                <option key={city} value={city} />
-              ))}
-            </datalist>
-          </div>
-
-          <fieldset className="field amounts-field">
-            <legend>How much would you like to give each month?</legend>
-            <div className="amounts">
-              {AMOUNT_OPTIONS.map((amount) => (
-                <label className="amount" key={amount}>
-                  <input
-                    type="radio"
-                    name="amount"
-                    value={amount}
-                    defaultChecked={draft.amount === String(amount)}
-                  />
-                  <span className="amount-value">{formatRupees(amount)}</span>
-                  {amount === SUGGESTED_AMOUNT && (
-                    <span className="amount-note">
-                      covers the salaries in full if {TARGET_MEMBERS} members choose it
-                    </span>
-                  )}
-                </label>
-              ))}
-              <label className="amount" key="other">
-                <input
-                  type="radio"
-                  name="amount"
-                  value="other"
-                  id="amount-other"
-                  defaultChecked={draft.amount === "other"}
-                />
-                <span className="amount-value">Other</span>
-              </label>
-            </div>
-
-            <div className="other-box">
-              <label htmlFor="otherAmount">If you chose Other, how much each month?</label>
-              <input
-                type="number"
-                id="otherAmount"
-                name="otherAmount"
-                min={50}
-                step={1}
-                inputMode="numeric"
-                defaultValue={draft.otherAmount}
-              />
-            </div>
-          </fieldset>
-
-          <div className="submit-row">
-            <button type="submit">Send my details</button>
-            <p className="hint">
-              Filled it already? Fill it again and the new amount replaces the old.
+          <section className="prose" aria-labelledby="ask">
+            <h2 id="ask">{t.askHeading}</h2>
+            <p className="equation" aria-hidden="true">
+              <span className="equation-part">{TARGET_MEMBERS}</span>
+              <span className="equation-sign">&times;</span>
+              <span className="equation-part">{formatRupees(SUGGESTED_AMOUNT)}</span>
+              <span className="equation-sign">=</span>
+              <span className="equation-total">{formatRupees(MONTHLY_TARGET)}</span>
             </p>
-          </div>
-        </form>
-      </section>
+            <p className="visually-hidden">
+              {t.askEquation(
+                TARGET_MEMBERS,
+                formatRupees(SUGGESTED_AMOUNT),
+                formatRupees(MONTHLY_TARGET),
+              )}
+            </p>
+            <p>{t.askBody}</p>
+            <p className="notice">{t.notice}</p>
+          </section>
+
+          <section className="prose" aria-labelledby="dates">
+            <h2 id="dates">{t.datesHeading}</h2>
+            <dl className="dates">
+              <div>
+                <dt>{t.formCloses}</dt>
+                <dd>{FORM_CLOSES}</dd>
+              </div>
+              <div>
+                <dt>{t.effectiveFrom}</dt>
+                <dd>{EFFECTIVE_FROM}</dd>
+              </div>
+            </dl>
+            <p>{t.whoFor}</p>
+          </section>
+        </div>
+
+        <div className="column-form">
+          <section className="form-section" id="form" aria-labelledby="form-heading">
+            <h2 id="form-heading">{done !== null ? " " : t.formHeading}</h2>
+
+            {done !== null ? (
+              <div className="confirmation" role="status">
+                <p className="confirmation-tick" aria-hidden="true">
+                  &#10003;
+                </p>
+                <p className="confirmation-heading">
+                  {wasUpdate ? t.doneUpdatedHeading : t.doneHeading}
+                </p>
+                <p className="confirmation-amount">{t.doneAmount(formatRupees(done))}</p>
+                <p className="confirmation-effective">{t.doneEffective(EFFECTIVE_FROM)}</p>
+                <Band />
+                <p className="hint">
+                  <a href={`/${qs}#form`}>{t.doneChange}</a>
+                </p>
+              </div>
+            ) : (
+              <>
+                {problem !== "" && (
+                  <p className="banner banner-problem" role="alert">
+                    {problem}
+                  </p>
+                )}
+
+                <form method="post" action="/api/join" className="form">
+                  <input type="hidden" name="lang" value={lang} />
+
+                  <fieldset className="step">
+                    <legend>
+                      <span className="step-number" aria-hidden="true">
+                        1
+                      </span>
+                      {t.step1}
+                    </legend>
+
+                    <div className="field">
+                      <label htmlFor="fullName">{t.fullName}</label>
+                      <input
+                        type="text"
+                        id="fullName"
+                        name="fullName"
+                        required
+                        maxLength={NAME_MAX}
+                        autoComplete="name"
+                        defaultValue={draft.fullName}
+                      />
+                    </div>
+
+                    <div className="field">
+                      <label htmlFor="country">{t.country}</label>
+                      <select id="country" name="country" required defaultValue={selectedCountry}>
+                        <optgroup label="India and the Gulf">
+                          {PINNED_COUNTRIES.map((c) => (
+                            <option key={c.iso} value={c.iso} data-dial={c.dial}>
+                              {c.name} ({c.dial})
+                            </option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="Every other country">
+                          {OTHER_COUNTRIES.map((c) => (
+                            <option key={c.iso} value={c.iso} data-dial={c.dial}>
+                              {c.name} ({c.dial})
+                            </option>
+                          ))}
+                        </optgroup>
+                      </select>
+                    </div>
+
+                    <div className="field">
+                      <label htmlFor="phone">{t.mobile}</label>
+                      <div className="phone-row">
+                        <span className="dial" id="dial" aria-hidden="true">
+                          {selectedDial}
+                        </span>
+                        <input
+                          type="tel"
+                          id="phone"
+                          name="phone"
+                          required
+                          inputMode="tel"
+                          autoComplete="tel-national"
+                          defaultValue={draft.phone}
+                        />
+                      </div>
+                      <p className="hint">{t.mobileHint}</p>
+                    </div>
+
+                    <div className="field">
+                      <label htmlFor="email">
+                        {t.email} <span className="optional">{t.optional}</span>
+                      </label>
+                      <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        maxLength={EMAIL_MAX}
+                        autoComplete="email"
+                        defaultValue={draft.email}
+                      />
+                    </div>
+                  </fieldset>
+
+                  <fieldset className="step">
+                    <legend>
+                      <span className="step-number" aria-hidden="true">
+                        2
+                      </span>
+                      {t.step2}
+                    </legend>
+
+                    <div className="field">
+                      <label htmlFor="address">{t.address}</label>
+                      <textarea
+                        id="address"
+                        name="address"
+                        required
+                        rows={4}
+                        maxLength={ADDRESS_MAX}
+                        autoComplete="street-address"
+                        defaultValue={draft.address}
+                      />
+                      <p className="hint">{t.addressHint}</p>
+                    </div>
+
+                    <div className="field">
+                      <label htmlFor="city">{t.city}</label>
+                      <input
+                        type="text"
+                        id="city"
+                        name="city"
+                        required
+                        maxLength={CITY_MAX}
+                        list="cities"
+                        autoComplete="address-level2"
+                        defaultValue={draft.city}
+                      />
+                      <datalist id="cities">
+                        {CITY_SUGGESTIONS.map((city) => (
+                          <option key={city} value={city} />
+                        ))}
+                      </datalist>
+                    </div>
+                  </fieldset>
+
+                  <fieldset className="step amounts-field">
+                    <legend>
+                      <span className="step-number" aria-hidden="true">
+                        3
+                      </span>
+                      {t.step3}
+                    </legend>
+
+                    <p className="amount-question">{t.amountLegend}</p>
+
+                    <div className="amounts">
+                      {AMOUNT_OPTIONS.map((amount) => (
+                        <label className="amount" key={amount}>
+                          <input
+                            type="radio"
+                            name="amount"
+                            value={amount}
+                            defaultChecked={draft.amount === String(amount)}
+                          />
+                          <span className="amount-value">{formatRupees(amount)}</span>
+                          {amount === SUGGESTED_AMOUNT && (
+                            <span className="amount-note">{t.amountCovers(TARGET_MEMBERS)}</span>
+                          )}
+                        </label>
+                      ))}
+                      <label className="amount" key="other">
+                        <input
+                          type="radio"
+                          name="amount"
+                          value="other"
+                          id="amount-other"
+                          defaultChecked={draft.amount === "other"}
+                        />
+                        <span className="amount-value amount-value-other">{t.amountOther}</span>
+                      </label>
+                    </div>
+
+                    <div className="other-box">
+                      <label htmlFor="otherAmount">{t.otherLabel}</label>
+                      <input
+                        type="number"
+                        id="otherAmount"
+                        name="otherAmount"
+                        min={50}
+                        step={1}
+                        inputMode="numeric"
+                        defaultValue={draft.otherAmount}
+                      />
+                    </div>
+                  </fieldset>
+
+                  <div className="submit-row">
+                    <button type="submit">{t.submit}</button>
+                    <p className="hint">{t.refillHint}</p>
+                  </div>
+                </form>
+              </>
+            )}
+          </section>
+        </div>
+      </div>
 
       <footer className="closing">
-        <div className="band" aria-hidden="true" />
+        <Band />
         <p className="arabic" dir="rtl" lang="ar">
           جزاك الله خيرا
         </p>

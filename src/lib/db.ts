@@ -131,3 +131,29 @@ export async function listMembers(): Promise<MemberRow[]> {
   );
   return rows as unknown as MemberRow[];
 }
+
+/**
+ * Aggregate figures for the public page: how many have joined and how much
+ * has been pledged. Counts and a sum, nothing else — no names, no numbers,
+ * nothing that identifies a member on a page without a password.
+ *
+ * Returns null rather than throwing. If the database is unreachable the
+ * announcement and the form must still render: a member who cannot see the
+ * running total can still fill the form, and that matters far more.
+ */
+export async function getPublicTotals(): Promise<{ members: number; pledged: number } | null> {
+  try {
+    const query = getQueryable();
+    const rows = await query(
+      `SELECT count(*)::int AS members, coalesce(sum(monthly_amount), 0)::int AS pledged
+         FROM member`,
+      [],
+    );
+    const row = rows[0];
+    if (!row) return null;
+    return { members: Number(row.members), pledged: Number(row.pledged) };
+  } catch (error) {
+    console.error("Could not read the running total:", error);
+    return null;
+  }
+}
