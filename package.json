@@ -2,7 +2,7 @@
   "name": "pjmdtf",
   "version": "1.0.0",
   "private": true,
-  "description": "Member directory and voluntary contribution form for Pewe Jama-tul-Muslimeen Deeni Thali Fund (Mumbai Jamaat)",
+  "description": "Member directory and voluntary contribution form for Pewe Jama-tul-Muslimeen Deeni Thali Fund",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

@@ -1,6 +1,6 @@
 # PJMDTF — Member Directory & Voluntary Contribution Form
 
-Pewe Jama-tul-Muslimeen Deeni Thali Fund, Mumbai Jamaat.
+Pewe Jama-tul-Muslimeen Deeni Thali Fund.
 
 The Managing Committee's monthly contribution appeal, and the form that goes
 with it. It replaces the WhatsApp message and Google Form.

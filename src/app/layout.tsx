@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import {
   FORM_CLOSES,
-  JAMAAT,
   MONTHLY_TARGET,
   ORGANISATION,
   ORGANISATION_SHORT,
@@ -22,8 +21,8 @@ const SUMMARY =
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: `${ORGANISATION_SHORT} — ${JAMAAT}`,
-  description: `${ORGANISATION}, ${JAMAAT}. ${SUMMARY}`,
+  title: ORGANISATION_SHORT,
+  description: `${ORGANISATION}. ${SUMMARY}`,
   applicationName: ORGANISATION_SHORT,
   // The Jamaat's finances are its own business. Shared by link, not searched
   // for — and the crawlers that unfurl a link preview do not consult this.
@@ -31,7 +30,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: SITE_URL,
-    siteName: `${ORGANISATION_SHORT} · ${JAMAAT}`,
+    siteName: ORGANISATION_SHORT,
     title: "Monthly contribution towards the Jamaat's salaries",
     description: SUMMARY,
     locale: "en_IN",

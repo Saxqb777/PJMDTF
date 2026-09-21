@@ -1,4 +1,4 @@
-import { JAMAAT, ORGANISATION } from "@/lib/constants";
+import { ORGANISATION } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,7 @@ export default async function Enter({ searchParams }: { searchParams: Search }) 
       <header className="masthead">
         <p className="eyebrow">{ORGANISATION}</p>
         <h1>Contribution report</h1>
-        <p className="standfirst">{JAMAAT} &middot; Managing Committee only</p>
+        <p className="standfirst">Managing Committee only</p>
         <div className="band" aria-hidden="true" />
       </header>
 

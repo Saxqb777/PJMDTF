@@ -56,8 +56,7 @@ export const CITY_SUGGESTIONS = [
 
 export const ORGANISATION = "Pewe Jama-tul-Muslimeen Deeni Thali Fund";
 export const ORGANISATION_SHORT = "PJMDTF";
-export const JAMAAT = "Mumbai Jamaat";
-export const SIGNATORY = "Managing Committee, PJMDTF (Mumbai Jamaat)";
+export const SIGNATORY = "Managing Committee, PJMDTF";
 
 /** Indian digit grouping: 25000 reads as 25,000 and 100000 as 1,00,000. */
 export function formatRupees(n: number): string {

@@ -92,7 +92,7 @@ const en: Copy = {
   switchLabel: "Read this in",
 
   title: "Monthly contribution towards the Jamaat’s salaries",
-  standfirst: "Mumbai Jamaat · Managing Committee",
+  standfirst: "Managing Committee",
 
   daysLeft: (days) => `${days} ${days === 1 ? "day" : "days"} left to fill this in`,
   lastDay: "Today is the last day to fill this in",
@@ -166,7 +166,7 @@ const ur: Copy = {
   switchLabel: "Ise padhein",
 
   title: "Jamaat ki tankhwahon ke liye mahana taawun",
-  standfirst: "Mumbai Jamaat · Managing Committee",
+  standfirst: "Managing Committee",
 
   daysLeft: (days) => `${days} din baaqi hain`,
   lastDay: "Aaj aakhri din hai",

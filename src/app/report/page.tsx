@@ -1,7 +1,6 @@
 import { listMembers } from "@/lib/db";
 import {
   AMOUNT_OPTIONS,
-  JAMAAT,
   MONTHLY_TARGET,
   ORGANISATION,
   SIGNATORY,
@@ -64,9 +63,7 @@ export default async function Report() {
       <header className="masthead">
         <p className="eyebrow">{ORGANISATION}</p>
         <h1>Contributions pledged</h1>
-        <p className="standfirst">
-          {JAMAAT} &middot; as at {today()}
-        </p>
+        <p className="standfirst">Managing Committee &middot; as at {today()}</p>
         <div className="band" aria-hidden="true" />
       </header>
 
